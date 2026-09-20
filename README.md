@@ -1,5 +1,7 @@
 # Cloudflare Multi Dynamic DNS
 
+[![Open your Home Assistant instance and open this repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=joohann&repository=cloudflare-multi-ddns&category=integration)
+
 A Home Assistant custom integration that keeps **A / AAAA DNS records across
 multiple Cloudflare zones (domains)** in sync with your changing external IP
 address — a multi-domain alternative to the built-in Cloudflare integration.
