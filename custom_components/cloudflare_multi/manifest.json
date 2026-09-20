@@ -3,10 +3,10 @@
   "name": "Cloudflare Multi Dynamic DNS",
   "codeowners": ["@joohann"],
   "config_flow": true,
-  "documentation": "https://github.com/joohann/ha-cloudflare-multi",
+  "documentation": "https://github.com/joohann/cloudflare-multi-ddns",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/joohann/ha-cloudflare-multi/issues",
+  "issue_tracker": "https://github.com/joohann/cloudflare-multi-ddns/issues",
   "requirements": [],
   "version": "0.1.0"
 }

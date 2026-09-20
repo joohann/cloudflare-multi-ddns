@@ -25,7 +25,7 @@ REST API v4.
 ### HACS (recommended)
 
 1. HACS → Integrations → three-dot menu → **Custom repositories**.
-2. Add `https://github.com/joohann/ha-cloudflare-multi` as an **Integration**.
+2. Add `https://github.com/joohann/cloudflare-multi-ddns` as an **Integration**.
 3. Install **Cloudflare Multi Dynamic DNS** and restart Home Assistant.
 
 ### Manual
@@ -63,7 +63,7 @@ change the check interval, or adjust notification settings.
 ## Repository layout (for publishing)
 
 ```
-ha-cloudflare-multi/
+cloudflare-multi-ddns/
 ├── hacs.json
 ├── README.md
 └── custom_components/
