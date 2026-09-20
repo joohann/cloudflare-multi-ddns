@@ -1,0 +1,73 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Cloudflare account",
+        "description": "Enter a Cloudflare API Token (create one in the Cloudflare dashboard under My Profile > API Tokens). The token needs Zone > DNS > Edit and Zone > Zone > Read permissions for the zones you want to keep up to date. A Global API Key is NOT used here.",
+        "data": {
+          "api_token": "API Token"
+        }
+      },
+      "record": {
+        "title": "DNS record",
+        "description": "Add a DNS record to keep in sync with your external IP. The record must already exist in the zone (create it once in the Cloudflare dashboard); this integration only updates its content.",
+        "data": {
+          "domain": "Zone / domain (e.g. example.com)",
+          "name": "Subdomain / record name (e.g. @, www, home)",
+          "record_type": "Record type",
+          "add_another": "Add another record"
+        }
+      }
+    },
+    "error": {
+      "auth_failed": "Could not authenticate with Cloudflare: {error_detail}",
+      "unknown": "Unexpected error: {error_detail}"
+    },
+    "abort": {
+      "already_configured": "This Cloudflare token is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Cloudflare DNS options",
+        "menu_options": {
+          "add_record": "Add a DNS record",
+          "remove_record": "Remove DNS records",
+          "interval": "Change check interval",
+          "notifications": "Notification settings"
+        }
+      },
+      "add_record": {
+        "title": "Add DNS record",
+        "data": {
+          "domain": "Zone / domain (e.g. example.com)",
+          "name": "Subdomain / record name (e.g. @, www, home)",
+          "record_type": "Record type",
+          "add_another": "Add another record"
+        }
+      },
+      "remove_record": {
+        "title": "Remove DNS records",
+        "data": {
+          "records": "Records to remove"
+        }
+      },
+      "interval": {
+        "title": "Check interval",
+        "data": {
+          "update_interval": "Minutes between checks"
+        }
+      },
+      "notifications": {
+        "title": "Notification settings",
+        "description": "Choose how you want to be notified when a DNS record is updated.",
+        "data": {
+          "notify_persistent": "Show a persistent notification in Home Assistant",
+          "notify_event": "Fire a 'cloudflare_multi_updated' event (for your own automations, e.g. a mobile push notification)",
+          "notify_targets": "Send directly to these notify targets (e.g. mobile_app_your_phone) - select one or more, or type a name that isn't listed yet"
+        }
+      }
+    }
+  }
+}

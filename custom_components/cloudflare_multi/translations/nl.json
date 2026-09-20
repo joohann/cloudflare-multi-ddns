@@ -1,0 +1,73 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Cloudflare account",
+        "description": "Vul een Cloudflare API Token in (aan te maken in het Cloudflare dashboard onder My Profile > API Tokens). De token heeft de rechten Zone > DNS > Edit en Zone > Zone > Read nodig voor de zones die je wilt bijhouden. Een Global API Key wordt hier NIET gebruikt.",
+        "data": {
+          "api_token": "API Token"
+        }
+      },
+      "record": {
+        "title": "DNS-record",
+        "description": "Voeg een DNS-record toe dat gesynchroniseerd moet blijven met je externe IP. Het record moet al bestaan in de zone (eenmalig aanmaken in het Cloudflare dashboard); deze integratie werkt alleen de inhoud bij.",
+        "data": {
+          "domain": "Zone / domein (bijv. example.com)",
+          "name": "Subdomein / recordnaam (bijv. @, www, home)",
+          "record_type": "Recordtype",
+          "add_another": "Nog een record toevoegen"
+        }
+      }
+    },
+    "error": {
+      "auth_failed": "Kon niet authenticeren bij Cloudflare: {error_detail}",
+      "unknown": "Onverwachte fout: {error_detail}"
+    },
+    "abort": {
+      "already_configured": "Deze Cloudflare token is al geconfigureerd."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Cloudflare DNS opties",
+        "menu_options": {
+          "add_record": "DNS-record toevoegen",
+          "remove_record": "DNS-records verwijderen",
+          "interval": "Controle-interval wijzigen",
+          "notifications": "Notificatie-instellingen"
+        }
+      },
+      "add_record": {
+        "title": "DNS-record toevoegen",
+        "data": {
+          "domain": "Zone / domein (bijv. example.com)",
+          "name": "Subdomein / recordnaam (bijv. @, www, home)",
+          "record_type": "Recordtype",
+          "add_another": "Nog een record toevoegen"
+        }
+      },
+      "remove_record": {
+        "title": "DNS-records verwijderen",
+        "data": {
+          "records": "Te verwijderen records"
+        }
+      },
+      "interval": {
+        "title": "Controle-interval",
+        "data": {
+          "update_interval": "Minuten tussen controles"
+        }
+      },
+      "notifications": {
+        "title": "Notificatie-instellingen",
+        "description": "Kies hoe je op de hoogte gehouden wilt worden als een DNS-record wordt bijgewerkt.",
+        "data": {
+          "notify_persistent": "Toon een persistent notification in Home Assistant",
+          "notify_event": "Vuur een 'cloudflare_multi_updated' event af (voor je eigen automations, bijv. een pushmelding naar je telefoon)",
+          "notify_targets": "Stuur direct naar deze notify-doelen (bijv. mobile_app_jouw_telefoon) - kies er één of meerdere, of typ een naam die nog niet in de lijst staat"
+        }
+      }
+    }
+  }
+}

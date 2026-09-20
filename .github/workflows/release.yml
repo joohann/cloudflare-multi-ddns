@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and attach release zip
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set version from tag in manifest.json
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          echo "Setting version to ${version}"
+          python3 - "$version" <<'PY'
+          import json, sys
+          path = "custom_components/cloudflare_multi/manifest.json"
+          with open(path) as f:
+              data = json.load(f)
+          data["version"] = sys.argv[1]
+          with open(path, "w") as f:
+              json.dump(data, f, indent=2)
+              f.write("\n")
+          PY
+
+      - name: Create zip
+        run: |
+          cd custom_components/cloudflare_multi
+          zip -r cloudflare_multi.zip . -x '*.svg'
+          mv cloudflare_multi.zip "${GITHUB_WORKSPACE}/cloudflare_multi.zip"
+
+      - name: Upload zip to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: cloudflare_multi.zip
