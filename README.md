@@ -1,5 +1,9 @@
 # Cloudflare Multi Dynamic DNS
 
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![Validate](https://github.com/joohann/cloudflare-multi-ddns/actions/workflows/validate.yml/badge.svg)](https://github.com/joohann/cloudflare-multi-ddns/actions/workflows/validate.yml)
+[![Hassfest](https://github.com/joohann/cloudflare-multi-ddns/actions/workflows/hassfest.yml/badge.svg)](https://github.com/joohann/cloudflare-multi-ddns/actions/workflows/hassfest.yml)
+
 [![Open your Home Assistant instance and open this repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=joohann&repository=cloudflare-multi-ddns&category=integration)
 
 A Home Assistant custom integration that keeps **A / AAAA DNS records across
