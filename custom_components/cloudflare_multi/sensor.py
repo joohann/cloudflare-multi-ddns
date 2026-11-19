@@ -15,7 +15,8 @@ from .const import (
     CONF_RECORD_TYPE,
     DOMAIN,
 )
-from .coordinator import CloudflareDnsCoordinator, _record_key
+from .coordinator import CloudflareDnsCoordinator
+from .panel_data import fqdn, record_key as _record_key
 
 
 async def async_setup_entry(
@@ -49,7 +50,9 @@ def _hub_device_info(entry: ConfigEntry) -> DeviceInfo:
     """Device representing the Cloudflare account itself (holds the IP sensors)."""
     return DeviceInfo(
         identifiers={(DOMAIN, entry.entry_id)},
-        name=f"Cloudflare DNS ({entry.title})",
+        # The entry title carries the integration name; keeping it out of here
+        # means a rename stays a change in const.py alone.
+        name=entry.title,
         manufacturer="Cloudflare",
         entry_type=DeviceEntryType.SERVICE,
     )
@@ -182,9 +185,16 @@ class DnsRecordSensor(CoordinatorEntity[CloudflareDnsCoordinator], SensorEntity)
             "domain": self._domain,
             "name": self._name,
             "type": self._record_type,
+            "fqdn": fqdn(self._domain, self._name),
             "status": record.get("status"),
             "last_updated": record.get("last_updated"),
             "previous_ip": record.get("previous_ip"),
             "previous_changed_at": record.get("previous_changed_at"),
             "error": record.get("error"),
+            # Reported as Cloudflare has them; this integration never writes
+            # the proxy setting or the TTL.
+            "zone_id": record.get("zone_id"),
+            "record_id": record.get("record_id"),
+            "proxied": record.get("proxied"),
+            "ttl": record.get("ttl"),
         }

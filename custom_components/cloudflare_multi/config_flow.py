@@ -18,6 +18,8 @@ from .const import (
     CONF_NOTIFY_EVENT,
     CONF_NOTIFY_PERSISTENT,
     CONF_NOTIFY_TARGETS,
+    CONF_PANEL_ENABLED,
+    CONF_PANEL_SIDEBAR,
     CONF_RECORD_NAME,
     CONF_RECORD_TYPE,
     CONF_RECORDS,
@@ -25,10 +27,14 @@ from .const import (
     DEFAULT_NOTIFY_EVENT,
     DEFAULT_NOTIFY_PERSISTENT,
     DEFAULT_NOTIFY_TARGETS,
+    DEFAULT_PANEL_ENABLED,
+    DEFAULT_PANEL_SIDEBAR,
     DEFAULT_RECORD_NAME,
     DEFAULT_RECORD_TYPE,
     DEFAULT_UPDATE_INTERVAL_MINUTES,
     DOMAIN,
+    INTEGRATION_NAME,
+    MAX_UPDATE_INTERVAL_MINUTES,
     MIN_UPDATE_INTERVAL_MINUTES,
     RECORD_TYPES,
 )
@@ -177,7 +183,7 @@ class CloudflareMultiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_record()
 
             return self.async_create_entry(
-                title="Cloudflare DNS",
+                title=INTEGRATION_NAME,
                 data={
                     CONF_API_TOKEN: self._api_token,
                 },
@@ -224,7 +230,13 @@ class CloudflareMultiOptionsFlow(config_entries.OptionsFlow):
         self._ensure_records()
         return self.async_show_menu(
             step_id="init",
-            menu_options=["add_record", "remove_record", "interval", "notifications"],
+            menu_options=[
+                "add_record",
+                "remove_record",
+                "interval",
+                "notifications",
+                "panel",
+            ],
         )
 
     async def async_step_add_record(
@@ -300,7 +312,7 @@ class CloudflareMultiOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(CONF_UPDATE_INTERVAL, default=current): selector.NumberSelector(
                     selector.NumberSelectorConfig(
                         min=MIN_UPDATE_INTERVAL_MINUTES,
-                        max=1440,
+                        max=MAX_UPDATE_INTERVAL_MINUTES,
                         step=1,
                         unit_of_measurement="minutes",
                         mode=selector.NumberSelectorMode.BOX,
@@ -362,12 +374,47 @@ class CloudflareMultiOptionsFlow(config_entries.OptionsFlow):
         )
         return self.async_show_form(step_id="notifications", data_schema=schema)
 
+    async def async_step_panel(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.FlowResult:
+        """Turn the panel on or off.
+
+        With the panel on, the gear button on the integration page opens the
+        panel instead of this dialog, so this is the last screen you see
+        until you switch it off again from the panel itself.
+        """
+        if user_input is not None:
+            return self._save(
+                panel_enabled=user_input[CONF_PANEL_ENABLED],
+                panel_sidebar=user_input[CONF_PANEL_SIDEBAR],
+            )
+
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_PANEL_ENABLED,
+                    default=self.config_entry.options.get(
+                        CONF_PANEL_ENABLED, DEFAULT_PANEL_ENABLED
+                    ),
+                ): bool,
+                vol.Required(
+                    CONF_PANEL_SIDEBAR,
+                    default=self.config_entry.options.get(
+                        CONF_PANEL_SIDEBAR, DEFAULT_PANEL_SIDEBAR
+                    ),
+                ): bool,
+            }
+        )
+        return self.async_show_form(step_id="panel", data_schema=schema)
+
     def _save(
         self,
         update_interval: int | None = None,
         notify_persistent: bool | None = None,
         notify_event: bool | None = None,
         notify_targets: list[str] | None = None,
+        panel_enabled: bool | None = None,
+        panel_sidebar: bool | None = None,
     ) -> config_entries.FlowResult:
         options = dict(self.config_entry.options)
         options[CONF_RECORDS] = self._records
@@ -379,4 +426,8 @@ class CloudflareMultiOptionsFlow(config_entries.OptionsFlow):
             options[CONF_NOTIFY_EVENT] = notify_event
         if notify_targets is not None:
             options[CONF_NOTIFY_TARGETS] = notify_targets
+        if panel_enabled is not None:
+            options[CONF_PANEL_ENABLED] = panel_enabled
+        if panel_sidebar is not None:
+            options[CONF_PANEL_SIDEBAR] = panel_sidebar
         return self.async_create_entry(title="", data=options)

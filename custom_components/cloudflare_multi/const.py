@@ -1,7 +1,21 @@
-"""Constants for the Cloudflare Multi Dynamic DNS integration."""
+"""Constants for the Cloudflare Multi Dynamic DNS integration.
+
+Single source of truth for naming: the integration name, the panel URL and
+the custom element name are defined here and nowhere else. Renaming the
+integration is a change in this file only.
+"""
 from datetime import timedelta
 
 DOMAIN = "cloudflare_multi"
+
+# Naming (keep every user visible name out of the code and the frontend)
+INTEGRATION_NAME = "Cloudflare Multi"
+PANEL_URL_PATH = "cloudflare-multi"
+PANEL_ELEMENT = "cloudflare-multi-panel"
+PANEL_ICON = "mdi:cloud-check-variant"
+PANEL_FOLDER = "panel"
+PANEL_ASSET_BASE = f"/{DOMAIN}_panel"
+PANEL_JS_NAME = f"{PANEL_ELEMENT}.js"
 
 # Config entry / options keys
 CONF_API_TOKEN = "api_token"
@@ -10,10 +24,16 @@ CONF_UPDATE_INTERVAL = "update_interval"
 CONF_NOTIFY_PERSISTENT = "notify_persistent"
 CONF_NOTIFY_EVENT = "notify_event"
 CONF_NOTIFY_TARGETS = "notify_targets"
+CONF_PANEL_ENABLED = "panel_enabled"
+CONF_PANEL_SIDEBAR = "panel_sidebar"
 
 DEFAULT_NOTIFY_PERSISTENT = True
 DEFAULT_NOTIFY_EVENT = True
 DEFAULT_NOTIFY_TARGETS: list[str] = []
+# Off by default: switching it on is what replaces the options dialog with
+# the panel, so nothing changes for an existing installation until asked.
+DEFAULT_PANEL_ENABLED = False
+DEFAULT_PANEL_SIDEBAR = False
 
 EVENT_DNS_UPDATED = "cloudflare_multi_updated"
 
@@ -27,6 +47,7 @@ DEFAULT_RECORD_NAME = "@"
 
 DEFAULT_UPDATE_INTERVAL_MINUTES = 10
 MIN_UPDATE_INTERVAL_MINUTES = 2
+MAX_UPDATE_INTERVAL_MINUTES = 1440
 DEFAULT_UPDATE_INTERVAL = timedelta(minutes=DEFAULT_UPDATE_INTERVAL_MINUTES)
 
 # Cloudflare API v4
@@ -48,6 +69,21 @@ IPV6_LOOKUP_URLS = [
 # Persistent storage for IP history (survives restarts)
 STORAGE_VERSION = 1
 STORAGE_KEY = DOMAIN
+# How many IP changes to keep per address family.
+HISTORY_LENGTH = 20
+
+# Services
+SERVICE_REFRESH = "refresh"
+SERVICE_SET_PANEL_ENABLED = "set_panel_enabled"
+ATTR_ENABLED = "enabled"
+ATTR_ENTRY_ID = "entry_id"
+
+# Websocket commands used by the panel
+WS_INFO = f"{DOMAIN}/info"
+WS_ZONES = f"{DOMAIN}/zones"
+WS_SET_RECORDS = f"{DOMAIN}/records/set"
+WS_SET_OPTIONS = f"{DOMAIN}/options/set"
+WS_REFRESH = f"{DOMAIN}/refresh"
 
 ATTR_DOMAIN = "domain"
 ATTR_NAME = "name"

@@ -31,8 +31,13 @@ jobs:
 
       - name: Create zip
         run: |
+          # HACS unpacks this straight into the user's custom_components
+          # folder, so ship only what the integration needs at run time:
+          # the test harness, its laptop photo and the i18n tool are for
+          # working on the repo, not for running it.
           cd custom_components/cloudflare_multi
-          zip -r cloudflare_multi.zip . -x '*.svg'
+          zip -r cloudflare_multi.zip . \
+            -x '*.svg' 'tests/*' 'tools/*' '__pycache__/*' '*/__pycache__/*'
           mv cloudflare_multi.zip "${GITHUB_WORKSPACE}/cloudflare_multi.zip"
 
       - name: Upload zip to release

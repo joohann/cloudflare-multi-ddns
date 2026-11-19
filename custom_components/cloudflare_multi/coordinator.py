@@ -13,6 +13,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
+from . import history as history_mod
 from .api import CloudflareApiError, CloudflareAuthError, CloudflareClient
 from .const import (
     CONF_API_TOKEN,
@@ -30,6 +31,8 @@ from .const import (
     DEFAULT_UPDATE_INTERVAL_MINUTES,
     DOMAIN,
     EVENT_DNS_UPDATED,
+    HISTORY_LENGTH,
+    INTEGRATION_NAME,
     IPV4_LOOKUP_URLS,
     IPV6_LOOKUP_URLS,
     STATUS_ERROR,
@@ -39,24 +42,19 @@ from .const import (
     STORAGE_KEY,
     STORAGE_VERSION,
 )
+from .panel_data import fqdn, record_key
 
 _LOGGER = logging.getLogger(__name__)
 
+# Kept for the sensor platform, which imported this name before the key
+# moved to panel_data.
+_record_key = record_key
 
-def _record_key(domain: str, name: str, record_type: str) -> str:
-    return f"{domain}|{name}|{record_type}"
-
-
-def _fqdn(domain: str, name: str) -> str:
-    """Build the full record name Cloudflare uses (@/empty means the zone root)."""
-    name = (name or "").strip()
-    if name in ("", "@"):
-        return domain
-    return f"{name}.{domain}"
+NOTIFY_TITLE = f"{INTEGRATION_NAME} bijgewerkt"
 
 
 class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
-    """Coordinator that checks the external IP and updates Cloudflare DNS records."""
+    """Coordinator that checks the external IP and updates Cloudflare records."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         self.entry = entry
@@ -79,8 +77,8 @@ class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._store: Store[dict[str, Any]] = Store(
             hass, STORAGE_VERSION, f"{STORAGE_KEY}.{entry.entry_id}"
         )
-        self._ip_history: dict[str, dict[str, str | None]] = {}
-        self._record_history: dict[str, dict[str, str | None]] = {}
+        self.ip_history: dict[str, Any] = {}
+        self.record_history: dict[str, Any] = {}
 
     @property
     def records(self) -> list[dict[str, str]]:
@@ -90,42 +88,22 @@ class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def async_load_history(self) -> None:
         """Load the stored IP history; call once before the first refresh."""
         stored = await self._store.async_load() or {}
-        self._ip_history = stored.get("ip_history", {})
-        self._record_history = stored.get("record_history", {})
+        self.ip_history = stored.get("ip_history", {})
+        self.record_history = stored.get("record_history", {})
+        history_mod.trim(self.ip_history, HISTORY_LENGTH)
+        history_mod.trim(self.record_history, HISTORY_LENGTH)
 
     async def _async_save_history(self) -> None:
         await self._store.async_save(
-            {"ip_history": self._ip_history, "record_history": self._record_history}
+            {"ip_history": self.ip_history, "record_history": self.record_history}
         )
-
-    def _track_ip(self, ip_type: str, ip: str | None, now: str) -> bool:
-        """Remember the current IP and move the old one to 'previous'.
-
-        Returns True when the address changed, so the caller can persist it.
-        """
-        if ip is None:
-            return False
-        entry = self._ip_history.setdefault(ip_type, {})
-        if entry.get("current") == ip:
-            return False
-        if entry.get("current"):
-            entry["previous"] = entry["current"]
-            entry["changed_at"] = now
-        entry["current"] = ip
-        return True
-
-    def _track_record(self, key: str, old_ip: str | None, now: str) -> None:
-        """Remember the IP a record held before it was updated."""
-        if not old_ip:
-            return
-        self._record_history[key] = {"previous": old_ip, "changed_at": now}
 
     async def _notify_updated(
         self, domain: str, name: str, rtype: str, old_ip: str | None, new_ip: str
     ) -> None:
         """Notify the user that a DNS record was updated, per options."""
         options = self.entry.options
-        record_label = f"{name}.{domain}" if name not in ("", "@") else domain
+        record_label = fqdn(domain, name)
         message = (
             f"{record_label} ({rtype}) is bijgewerkt naar {new_ip}"
             + (f" (was {old_ip})" if old_ip else "")
@@ -147,8 +125,8 @@ class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             persistent_notification.async_create(
                 self.hass,
                 message,
-                title="Cloudflare DNS bijgewerkt",
-                notification_id=f"{DOMAIN}_{_record_key(domain, name, rtype)}",
+                title=NOTIFY_TITLE,
+                notification_id=f"{DOMAIN}_{record_key(domain, name, rtype)}",
             )
 
         for target in options.get(CONF_NOTIFY_TARGETS, DEFAULT_NOTIFY_TARGETS):
@@ -156,7 +134,7 @@ class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await self.hass.services.async_call(
                     "notify",
                     target,
-                    {"message": message, "title": "Cloudflare DNS bijgewerkt"},
+                    {"message": message, "title": NOTIFY_TITLE},
                     blocking=False,
                 )
             except Exception as err:  # noqa: BLE001 - one bad target shouldn't break the rest
@@ -183,15 +161,15 @@ class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     ) -> dict[str, Any]:
         """Merge the tracked history into the data exposed to the entities."""
         for key, record in results.items():
-            history = self._record_history.get(key, {})
-            record["previous_ip"] = history.get("previous")
-            record["previous_changed_at"] = history.get("changed_at")
+            entry = history_mod.state(self.record_history, key)
+            record["previous_ip"] = entry["previous"]
+            record["previous_changed_at"] = entry["changed_at"]
 
         data: dict[str, Any] = {"ipv4": ipv4, "ipv6": ipv6, "records": results}
         for ip_type in ("ipv4", "ipv6"):
-            history = self._ip_history.get(ip_type, {})
-            data[f"{ip_type}_previous"] = history.get("previous")
-            data[f"{ip_type}_changed_at"] = history.get("changed_at")
+            entry = history_mod.state(self.ip_history, ip_type)
+            data[f"{ip_type}_previous"] = entry["previous"]
+            data[f"{ip_type}_changed_at"] = entry["changed_at"]
         return data
 
     async def _async_update_data(self) -> dict[str, Any]:
@@ -203,7 +181,7 @@ class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # stay useful for anyone who only wants to watch their IP.
             ipv4 = await self._async_lookup_ip(IPV4_LOOKUP_URLS)
             ipv6 = await self._async_lookup_ip(IPV6_LOOKUP_URLS)
-            if self._track_ip("ipv4", ipv4, now) | self._track_ip("ipv6", ipv6, now):
+            if self._track_ips(ipv4, ipv6, now):
                 await self._async_save_history()
             return self._with_history(ipv4, ipv6, {})
 
@@ -218,10 +196,11 @@ class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if needs_v6 and not ipv6:
             raise UpdateFailed("Could not determine external IPv6 address")
 
-        if self._track_ip("ipv4", ipv4, now) | self._track_ip("ipv6", ipv6, now):
+        if self._track_ips(ipv4, ipv6, now):
             await self._async_save_history()
 
-        # Resolve zone names -> zone ids once per cycle.
+        # Cloudflare writes through a zone id, so the names the user config
+        # holds are resolved to ids once per cycle.
         try:
             zones = await self.client.async_list_zones()
         except CloudflareAuthError as err:
@@ -230,7 +209,7 @@ class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise UpdateFailed(f"Could not fetch Cloudflare zones: {err}") from err
         zone_ids = {z["name"]: z["id"] for z in zones}
 
-        # Group requested records by domain (zone) to minimise GET calls.
+        # Group requested records by zone to minimise GET calls.
         domains: dict[str, list[dict[str, str]]] = {}
         for rec in records:
             domains.setdefault(rec[CONF_DOMAIN_NAME], []).append(rec)
@@ -247,7 +226,7 @@ class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     domain,
                 )
                 for rec in recs:
-                    key = _record_key(
+                    key = record_key(
                         domain, rec[CONF_RECORD_NAME], rec[CONF_RECORD_TYPE]
                     )
                     results[key] = {
@@ -264,7 +243,7 @@ class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 entries = await self.client.async_list_dns_records(zone_id)
             except CloudflareApiError as err:
                 for rec in recs:
-                    key = _record_key(
+                    key = record_key(
                         domain, rec[CONF_RECORD_NAME], rec[CONF_RECORD_TYPE]
                     )
                     results[key] = {
@@ -274,21 +253,22 @@ class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         "ip": None,
                         "status": STATUS_ERROR,
                         "error": str(err),
+                        "zone_id": zone_id,
                     }
                 continue
 
             for rec in recs:
                 name = rec[CONF_RECORD_NAME]
                 rtype = rec[CONF_RECORD_TYPE]
-                key = _record_key(domain, name, rtype)
-                fqdn = _fqdn(domain, name)
+                key = record_key(domain, name, rtype)
+                full_name = fqdn(domain, name)
                 desired_ip = ipv4 if rtype == "A" else ipv6
 
                 match = next(
                     (
                         e
                         for e in entries
-                        if e.get("name") == fqdn and e.get("type") == rtype
+                        if e.get("name") == full_name and e.get("type") == rtype
                     ),
                     None,
                 )
@@ -296,10 +276,10 @@ class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if match is None:
                     _LOGGER.warning(
                         "No existing %s record named '%s' found in Cloudflare zone "
-                        "'%s' - create it once in the Cloudflare dashboard, it will "
-                        "then be kept up to date automatically",
+                        "'%s' - create it once in the Cloudflare dashboard, it "
+                        "will then be kept up to date automatically",
                         rtype,
-                        fqdn,
+                        full_name,
                         domain,
                     )
                     results[key] = {
@@ -308,17 +288,24 @@ class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         "type": rtype,
                         "ip": desired_ip,
                         "status": STATUS_NOT_FOUND,
+                        "zone_id": zone_id,
                     }
                     continue
 
+                # proxied and ttl are reported, never written: the dashboard
+                # stays in charge of everything except the address itself.
+                common = {
+                    "domain": domain,
+                    "name": name,
+                    "type": rtype,
+                    "zone_id": zone_id,
+                    "record_id": match.get("id"),
+                    "proxied": match.get("proxied"),
+                    "ttl": match.get("ttl"),
+                }
+
                 if match.get("content") == desired_ip:
-                    results[key] = {
-                        "domain": domain,
-                        "name": name,
-                        "type": rtype,
-                        "ip": desired_ip,
-                        "status": STATUS_OK,
-                    }
+                    results[key] = {**common, "ip": desired_ip, "status": STATUS_OK}
                     continue
 
                 try:
@@ -329,14 +316,12 @@ class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     _LOGGER.error(
                         "Failed to update %s record '%s' in zone '%s': %s",
                         rtype,
-                        fqdn,
+                        full_name,
                         domain,
                         err,
                     )
                     results[key] = {
-                        "domain": domain,
-                        "name": name,
-                        "type": rtype,
+                        **common,
                         "ip": match.get("content"),
                         "status": STATUS_ERROR,
                         "error": str(err),
@@ -345,19 +330,19 @@ class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     _LOGGER.info(
                         "Updated %s record '%s' in zone '%s' to %s",
                         rtype,
-                        fqdn,
+                        full_name,
                         domain,
                         desired_ip,
                     )
                     await self._notify_updated(
                         domain, name, rtype, match.get("content"), desired_ip
                     )
-                    self._track_record(key, match.get("content"), now)
-                    records_changed = True
+                    if history_mod.record_change(
+                        self.record_history, key, desired_ip, now, HISTORY_LENGTH
+                    ):
+                        records_changed = True
                     results[key] = {
-                        "domain": domain,
-                        "name": name,
-                        "type": rtype,
+                        **common,
                         "ip": desired_ip,
                         "status": STATUS_UPDATED,
                         "last_updated": now,
@@ -367,3 +352,13 @@ class CloudflareDnsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             await self._async_save_history()
 
         return self._with_history(ipv4, ipv6, results)
+
+    def _track_ips(self, ipv4: str | None, ipv6: str | None, now: str) -> bool:
+        """Record both addresses; True when either of them changed."""
+        changed_v4 = history_mod.record_change(
+            self.ip_history, "ipv4", ipv4, now, HISTORY_LENGTH
+        )
+        changed_v6 = history_mod.record_change(
+            self.ip_history, "ipv6", ipv6, now, HISTORY_LENGTH
+        )
+        return changed_v4 or changed_v6

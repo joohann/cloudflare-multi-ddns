@@ -35,7 +35,8 @@
           "add_record": "DNS-record toevoegen",
           "remove_record": "DNS-records verwijderen",
           "interval": "Controle-interval wijzigen",
-          "notifications": "Notificatie-instellingen"
+          "notifications": "Notificatie-instellingen",
+          "panel": "Paneel"
         }
       },
       "add_record": {
@@ -66,6 +67,14 @@
           "notify_persistent": "Toon een persistent notification in Home Assistant",
           "notify_event": "Vuur een 'cloudflare_multi_updated' event af (voor je eigen automations, bijv. een pushmelding naar je telefoon)",
           "notify_targets": "Stuur direct naar deze notify-doelen (bijv. mobile_app_jouw_telefoon) - kies er één of meerdere, of typ een naam die nog niet in de lijst staat"
+        }
+      },
+      "panel": {
+        "title": "Paneel",
+        "description": "Met het paneel aan opent het tandwiel op de integratiepagina een volledige pagina in plaats van deze dialoog, en verhuizen alle instellingen daarheen. Uitzetten doe je in het paneel zelf, of met de service cloudflare_multi.set_panel_enabled.",
+        "data": {
+          "panel_enabled": "Paneel gebruiken in plaats van deze dialoog",
+          "panel_sidebar": "Paneel ook in de zijbalk tonen"
         }
       }
     }
