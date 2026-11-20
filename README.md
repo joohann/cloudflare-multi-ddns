@@ -5,7 +5,6 @@
   <a href="../../actions/workflows/validate.yml"><img src="https://github.com/joohann/cloudflare-multi-ddns/actions/workflows/validate.yml/badge.svg" alt="Validate"></a>
   <a href="../../actions/workflows/hassfest.yml"><img src="https://github.com/joohann/cloudflare-multi-ddns/actions/workflows/hassfest.yml/badge.svg" alt="Hassfest"></a>
   <img src="https://img.shields.io/badge/Home%20Assistant-2026.4%2B-blue" alt="Home Assistant 2026.4 or later">
-  <img src="https://img.shields.io/badge/HACS-custom%20repository-41BDF5" alt="HACS custom repository">
   <img src="https://img.shields.io/badge/records-A%20%26%20AAAA-green" alt="A and AAAA records">
 </p>
 
